@@ -60,12 +60,10 @@ def get_ESM2_embeddings(args):
         torch.manual_seed(23)
         #MASK_TENSOR = torch.normal(mean=0, std=1, size=(1, args.token_dim))
         CHROM_TENSORS = torch.normal(mean=0, std=1, size=(1895, args.token_dim))
-        # 1894 is the total number of chromosome choices, it is hardcoded for now
+        # 1895 is the total number of chromosome choices, it is hardcoded for now
         all_pe = torch.vstack((all_pe, CHROM_TENSORS)) # Add the chrom tensors to the end
         all_pe.requires_grad = False
 
-
-    #print("Loaded PE", all_pe.shape)
     return all_pe
 
 def padding_tensor(sequences):
@@ -277,7 +275,7 @@ if __name__=="__main__":
     
     # MISC ARGUMENTS
     parser.add_argument("--spec_chrom_csv_path", default="/dfs/project/cross-species/yanay/code/all_to_chrom_pos.csv", type=str, help="CSV Path for species genes to chromosomes and start locations.")
-    parser.add_argument("--token_file", default="/dfs/project/uce/all_species_pe_tokens.torch", type=str, help="Path for token embeddings, torch file.")
+    parser.add_argument("--token_file", default="/dfs/project/cross-species/yanay/code/uce_tokens.torch", type=str, help="Path for token embeddings, torch file.")
     parser.add_argument("--protein_embeddings_dir", default="/dfs/project/cross-species/yanay/data/proteome/embeddings/", type=str, help="Directory where protein embedding .pt files are stored.")
     parser.add_argument("--offset_pkl_path", default="/dfs/project/uce/all_species_offsets.pkl", type=str, help="PKL file which contains offsets for each species.")
     parser.add_argument("--accelerator_dir", default="/lfs/local/0/yanay/mammal_accel_new_dl_chrom_33_eval", type=str, help="Accelerator Dir, not really used.")
