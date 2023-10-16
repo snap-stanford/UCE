@@ -110,55 +110,51 @@ def sample_cell_sentences(counts, batch_weights, dataset, args,
                           dataset_to_chroms,
                           dataset_to_starts):
 
-    dataset_idxs = dataset_to_protein_embeddings[dataset]
-    cell_sentences = torch.zeros((counts.shape[0], args.pad_length))
-    # pos = adata.X > 0
-    mask = torch.zeros((counts.shape[0], args.pad_length))
+    dataset_idxs = dataset_to_protein_embeddings[dataset] # get the dataset specific protein embedding idxs
+    cell_sentences = torch.zeros((counts.shape[0], args.pad_length)) # init the cell representation as 0s
+    mask = torch.zeros((counts.shape[0], args.pad_length)) # start of masking the whole sequence
+    chroms = dataset_to_chroms[dataset] # get the dataset specific chroms for each gene
+    starts = dataset_to_starts[dataset] # get the dataset specific genomic start locations for each gene
 
-    chroms = dataset_to_chroms[dataset]
-    starts = dataset_to_starts[dataset]
-
-    longest_seq_len = 0
+    longest_seq_len = 0 # we need to keep track of this so we can subset the batch at the end
 
     for c, cell in enumerate(counts):
-        pos_genes = torch.where(counts[c] > 0)[0]
-        neg_genes = torch.where(counts[c] < 1)[0]
-        if len(pos_genes) == 0:
-            pos_genes = neg_genes
-
         weights = batch_weights[c].numpy()
         weights = weights / sum(weights)  # RE NORM after mask
-
-        # mask.append(torch.ones(sample_size))
+        
+        # randomly choose the genes that will make up the sample, weighted by expression, with replacement
         choice_idx = np.random.choice(np.arange(len(weights)),
                                       size=args.sample_size, p=weights,
                                       replace=True)
-        choosen_chrom = chroms[choice_idx]
-        chrom_sort = np.argsort(choosen_chrom)  # order by chromsome
-        choice_idx = choice_idx[chrom_sort]  # now ordered by chrom
+        choosen_chrom = chroms[choice_idx] # get the sampled genes chromosomes
+        # order the genes by chromosome
+        chrom_sort = np.argsort(choosen_chrom)  
+        choice_idx = choice_idx[chrom_sort]
 
-        # sort by start
+        # sort the genes by start
         new_chrom = chroms[choice_idx]
         choosen_starts = starts[choice_idx]
 
         ordered_choice_idx = np.full((args.pad_length),
                                      args.cls_token_idx)  # start with cls
         # i= 0 first token is CLS
-        i = 1  # continue on to the rest of the sequence with left bracket being assumed.\
-        # Shuffle the chroms now
+        i = 1  # continue on to the rest of the sequence with left bracket being assumed.
+        # Shuffle the chroms now, there's no natural order to chromosomes
         uq_chroms = np.unique(new_chrom)
         np.random.shuffle(uq_chroms) # shuffle
+        
+        # This loop is actually just over one cell
         for chrom in uq_chroms:
-            # Open Chrom
+            # Open Chrom token
             ordered_choice_idx[i] = int(chrom) + args.CHROM_TOKEN_OFFSET # token of this chromosome # i = 1 next token is a chrom open
             i += 1
-            # now sort the by start order within the chroms
+            # now sort the genes by start order within the chroms
             loc = np.where(new_chrom == chrom)[0]
             sort_by_start = np.argsort(
-                choosen_starts[loc])  # start locations for these chromsomes
+                choosen_starts[loc])  # start locations for this chromsome
 
             to_add = choice_idx[loc[sort_by_start]]
-            ordered_choice_idx[i:(i + len(to_add))] = dataset_idxs[to_add]  # convert
+            ordered_choice_idx[i:(i + len(to_add))] = dataset_idxs[to_add]
             i += len(to_add)
             ordered_choice_idx[i] = args.chrom_token_right_idx # add the chrom sep again
             i += 1  # add the closing token again
@@ -172,11 +168,9 @@ def sample_cell_sentences(counts, batch_weights, dataset, args,
 
         mask[c, :] = cell_mask
 
-        ordered_choice_idx[i:] = args.pad_token_idx  # mask
-
-        # sample_row = pos_gene_embeds[choice_idx, :]
+        ordered_choice_idx[i:] = args.pad_token_idx # the remainder of the sequence
         cell_sentences[c, :] = torch.from_numpy(ordered_choice_idx)
         
-    cell_sentences_pe = cell_sentences.long()  # .unsqueeze(2) # all_pe[cell_sentences.long(), :]
+    cell_sentences_pe = cell_sentences.long() # token indices
     
     return cell_sentences_pe, mask, longest_seq_len, cell_sentences
