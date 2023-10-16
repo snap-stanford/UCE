@@ -117,7 +117,7 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict, ac
     model = TransformerModel(token_dim=token_dim, d_model=emsize, nhead=nhead, d_hid=d_hid, 
                              nlayers=nlayers, dropout=dropout, output_dim=args.output_dim)
     if args.model_loc is None:
-        model_loc = f"/dfs/project/cross-species/yanay/code/state_dicts/unwrapped_chrom_model_state_dict_step_{args.step_num}_epoch_{args.epoch_num}_nlayers_{args.nlayers}_sample_size_{args.sample_size}_CLS"
+        model_loc = f"/dfs/project/cross-species/yanay/code/state_dicts/unwrapped_chrom_model_state_dict_step_{args.step_num}_epoch_{args.epoch_num}_nlayers_{args.nlayers}_sample_size_{args.sample_size}_CLS.torch"
         if args.CXG:
             model_loc += "_CXG"
     else:
@@ -126,7 +126,7 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict, ac
     all_pe = get_ESM2_embeddings(args)
     all_pe.requires_grad= False
     model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
-    model.load_state_dict(torch.load(f"{model_loc}.torch", map_location="cpu"), strict=True)
+    model.load_state_dict(torch.load(model_loc, map_location="cpu"), strict=True)
     print(f"Loaded model:\n{model_loc}")
     model = model.eval()
     model = accelerator.prepare(model)
