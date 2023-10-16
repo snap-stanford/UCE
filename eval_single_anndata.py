@@ -270,26 +270,25 @@ if __name__=="__main__":
     parser.add_argument("--cls_token_idx", type=int, default=3, help="CLS token index")
     parser.add_argument("--CHROM_TOKEN_OFFSET", type=int, default=143574, help="Offset index, tokens after this mark are chromosome identifiers")
     
-    parser.add_argument('--model_loc', type=str, default=None, help='Specific location of the model if you want to pass a path. Make sure to set all the other model parameters as well as this argument.')    
+    parser.add_argument('--model_loc', type=str, default="model_files/4layer_model.torch", help='Specific location of the model if you want to pass a path. Make sure to set all the other model parameters as well as this argument.')    
     
     
     # MISC ARGUMENTS
-    parser.add_argument("--spec_chrom_csv_path", default="/dfs/project/cross-species/yanay/code/all_to_chrom_pos.csv", type=str, help="CSV Path for species genes to chromosomes and start locations.")
-    parser.add_argument("--token_file", default="/dfs/project/cross-species/yanay/code/uce_tokens.torch", type=str, help="Path for token embeddings, torch file.")
-    parser.add_argument("--protein_embeddings_dir", default="/dfs/project/cross-species/yanay/data/proteome/embeddings/", type=str, help="Directory where protein embedding .pt files are stored.")
-    parser.add_argument("--offset_pkl_path", default="/dfs/project/uce/all_species_offsets.pkl", type=str, help="PKL file which contains offsets for each species.")
-    parser.add_argument("--accelerator_dir", default="/lfs/local/0/yanay/mammal_accel_new_dl_chrom_33_eval", type=str, help="Accelerator Dir, not really used.")
-    
+    parser.add_argument("--spec_chrom_csv_path", default="model_files/species_chrom.csv", type=str, help="CSV Path for species genes to chromosomes and start locations.")
+    parser.add_argument("--token_file", default="model_files/all_tokens.torch", type=str, help="Path for token embeddings, torch file.")
+    parser.add_argument("--protein_embeddings_dir", default="model_files/protein_embeddings/", type=str, help="Directory where protein embedding .pt files are stored.")
+    parser.add_argument("--offset_pkl_path", default="model_files/species_offsets.pkl", type=str, help="PKL file which contains offsets for each species.")
+    parser.add_argument("--accelerator_dir", default="model_files", type=str, help="Accelerator Dir, not really used.")
     
     
     
     parser.set_defaults(
-        epoch_num=8,#7,#6,#5,#4,#3,#2,#,1,
-        step_num=2013249,#1509937,#1258281,#1006624,#754968,#503312,#251656,
+        epoch_num=8,
+        step_num=251656,
         batch_size=25,
         output_dim=1280,
         d_hid=5120,
-        nlayers=33,
+        nlayers=4,
         sample_size=1024,
         token_dim=5120,
         pad_length=1536,
