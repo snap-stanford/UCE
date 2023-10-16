@@ -55,7 +55,7 @@ from pathlib import Path
 
 def get_ESM2_embeddings(args):
     # Load in ESM2 embeddings and special tokens
-    all_pe = torch.load(f"/dfs/project/uce/all_species_pe_tokens.torch")
+    all_pe = torch.load(args.token_file)
     if all_pe.shape[0] == 143574:
         torch.manual_seed(23)
         #MASK_TENSOR = torch.normal(mean=0, std=1, size=(1, args.token_dim))
@@ -277,6 +277,7 @@ if __name__=="__main__":
     
     # MISC ARGUMENTS
     parser.add_argument("--spec_chrom_csv_path", default="/dfs/project/cross-species/yanay/code/all_to_chrom_pos.csv", type=str, help="CSV Path for species genes to chromosomes and start locations.")
+    parser.add_argument("--token_file", default="/dfs/project/uce/all_species_pe_tokens.torch", type=str, help="Path for token embeddings, torch file.")
     parser.add_argument("--protein_embeddings_dir", default="/dfs/project/cross-species/yanay/data/proteome/embeddings/", type=str, help="Directory where protein embedding .pt files are stored.")
     parser.add_argument("--offset_pkl_path", default="/dfs/project/uce/all_species_offsets.pkl", type=str, help="PKL file which contains offsets for each species.")
     parser.add_argument("--accelerator_dir", default="/lfs/local/0/yanay/mammal_accel_new_dl_chrom_33_eval", type=str, help="Accelerator Dir, not really used.")
