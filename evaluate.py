@@ -17,6 +17,7 @@ from torch import nn, Tensor
 
 from model import TransformerModel
 from eval_data import MultiDatasetSentences, MultiDatasetSentenceCollator
+from utils import figshare_download
 
 from torch.utils.data import DataLoader
 from data_proc.data_utils import adata_path_to_prot_chrom_starts, \
@@ -29,21 +30,25 @@ import numpy as np
 import torch
 
 
-# ... [Assuming other necessary imports are at the top]
-
 class AnndataProcessor:
     def __init__(self, args, accelerator):
         self.args = args
         self.accelerator = accelerator
-
-        self.adata_name = self.args.adata_path.split("/")[-1]
-        self.adata_root_path = self.args.adata_path.replace(self.adata_name, "")
         self.h5_folder_path = self.args.dir
         self.npz_folder_path = self.args.dir
+        self.scp = ""
+
+        # Check if paths exist, if not, create them
+        self.check_paths()
+
+        # Set up the anndata
+        self.adata_name = self.args.adata_path.split("/")[-1]
+        self.adata_root_path = self.args.adata_path.replace(self.adata_name, "")
         self.name = self.adata_name.replace(".h5ad", "")
         self.proc_h5_path = self.h5_folder_path + f"{self.name}_proc.h5ad"
         self.adata = None
 
+        # Set up the row
         row = pd.Series()
         row.path = self.adata_name
         row.covar_col = np.nan
@@ -56,12 +61,40 @@ class AnndataProcessor:
         self.starts_path = self.args.dir + f"{self.name}_starts.pkl"
         self.shapes_dict_path = self.args.dir + f"{self.name}_shapes_dict.pkl"
 
+    def check_paths(self):
+        """
+        Check if the paths exist, if not, create them
+        """
+        figshare_download("https://figshare.com/ndownloader/files/42706558",
+                                self.args.spec_chrom_csv_path)
+        figshare_download("https://figshare.com/ndownloader/files/42706555",
+                                self.args.offset_pkl_path)
+        if not os.path.exists(self.args.protein_embeddings_dir):
+            figshare_download("https://figshare.com/ndownloader/files/42715213",
+                self.args.dir + '/protein_embeddings.tar.gz')
+        figshare_download("https://figshare.com/ndownloader/files/42706585",
+                                self.args.token_file)
+        if self.args.adata_path is None:
+            print("Using sample AnnData: 10k pbmcs dataset")
+            self.args.adata_path = "./data/10k_pbmcs_proc.h5ad"
+            figshare_download(
+                "https://figshare.com/ndownloader/files/42706966",
+                self.args.adata_path)
+        if self.args.model_loc is None:
+            print("Using sample 4 layer model")
+            self.args.model_loc = "./model_files/4layer_model.torch"
+            figshare_download(
+                "https://figshare.com/ndownloader/files/42706576",
+                self.args.model_loc)
+
+
     def preprocess_anndata(self):
         if self.accelerator.is_main_process:
             self.adata, num_cells, num_genes = \
                 process_raw_anndata(self.row,
                                     self.h5_folder_path,
                                     self.npz_folder_path,
+                                    self.scp,
                                     self.args.skip,
                                     self.args.filter,
                                     root=self.adata_root_path)
@@ -86,7 +119,7 @@ class AnndataProcessor:
                 print("PE Idx, Chrom and Starts files already created")
 
             else:
-                species_to_pe = get_species_to_pe(args.protein_embeddings_dir)
+                species_to_pe = get_species_to_pe(self.args.protein_embeddings_dir)
                 with open(self.args.offset_pkl_path, "rb") as f:
                     species_to_offsets = pickle.load(f)
 
@@ -195,7 +228,7 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
         for batch in pbar:
             batch_sentences, mask, idxs = batch[0], batch[1], batch[2]
             batch_sentences = batch_sentences.permute(1, 0)
-            batch_sentences = model.module.pe_embedding(batch_sentences.long())
+            batch_sentences = model.pe_embedding(batch_sentences.long())
             batch_sentences = nn.functional.normalize(batch_sentences,
                                                       dim=2)  # Normalize token outputs now
             _, embedding = model.forward(batch_sentences, mask=mask)

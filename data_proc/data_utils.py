@@ -170,7 +170,8 @@ def adata_path_to_prot_chrom_starts(adata, dataset_species, spec_pe_genes, gene_
 
 
 
-def process_raw_anndata(row, h5_folder_path, npz_folder_path, scp, skip, additional_filter, root="/dfs/project/cross-species/yanay/uce_data/h5s"):
+def process_raw_anndata(row, h5_folder_path, npz_folder_path, scp, skip,
+                        additional_filter, root):
         path = row.path
         if not os.path.isfile(root + "/" + path):
             print( "**********************************")
@@ -236,7 +237,7 @@ def process_raw_anndata(row, h5_folder_path, npz_folder_path, scp, skip, additio
         return adata, num_cells, num_genes
     
     
-def get_species_to_pe(EMBEDDING_DIR='/dfs/project/cross-species/yanay/data/proteome/embeddings'):
+def get_species_to_pe(EMBEDDING_DIR):
     """
     Given an embedding directory, return all embeddings as a dictionary coded by species.
     Note: In the current form, this function is written such that the directory needs all of the following species embeddings.
