@@ -13,9 +13,10 @@ pip install -r requirements.txt
 To generate an embedding for a new single-cell RNA sequencing dataset in the 
 AnnData format, use the `eval_single_anndata.py` script.
 
-`python eval_single_anndata.py --adata_path {path_to_anndata} 
---dir {output_dir} --species {species}--model_loc {model_loc} 
---nlayers {nlayers} --batch_size {batch_size}`
+```
+python eval_single_anndata.py --adata_path {path_to_anndata} --dir {output_dir} --species {species}--model_loc {model_loc}
+--nlayers {nlayers} --batch_size {batch_size}
+```
 
 where
 - `adata_path`: a h5ad file. The `.X` slot of the file should be scRNA-seq counts. The `.var_names` slot should correspond to gene names, *not ENSEMBLIDs*.
