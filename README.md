@@ -14,14 +14,14 @@ To generate an embedding for a new single-cell RNA sequencing dataset in the
 AnnData format, use the `eval_single_anndata.py` script.
 
 ```
-python eval_single_anndata.py --adata_path {path_to_anndata} --dir {output_dir} --species {species}--model_loc {model_loc}
---nlayers {nlayers} --batch_size {batch_size}
+python eval_single_anndata.py --adata_path {path_to_anndata} --dir {output_dir} --species {species} --model_loc {model_loc}
 ```
+
+Run with default parameters to generate a sample output for the 10k pbmc dataset
 
 where
 - `adata_path`: a h5ad file. The `.X` slot of the file should be scRNA-seq counts. The `.var_names` slot should correspond to gene names, *not ENSEMBLIDs*.
-- `dir`: the working directory in which intermediate and final output files 
-  will be saved to skip repeated processing of the same dataset.
+- `dir`: the working directory in which intermediate and final output files will be saved to skip repeated processing of the same dataset.
 - `species`: the species of the dataset you are embedding.
 - `batch_size`: the per GPU batch size. For the 33 layer model, on a 80GB GPU, you should use 25. For a 4 layer model on the same GPU, you can use 100.
 - `nlayers`: the number of layers of the model. This should be specified even if you are loading a specific model file already.
