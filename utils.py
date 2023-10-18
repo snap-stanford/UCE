@@ -6,8 +6,11 @@ Utils
 import warnings
 warnings.filterwarnings("ignore")
 import pandas as pd
-import sys
 import numpy as np
+import os
+import requests
+from tqdm import tqdm
+import tarfile
 
 
 def get_shapes_dict(dataset_path):
@@ -64,3 +67,37 @@ def get_shapes_dict(dataset_path):
             shapes_dict[name] = (int(ncells), int(ngenes))
 
     return shapes_dict
+
+
+def figshare_download(url, save_path):
+    """
+    Figshare download helper with progress bar
+
+    Args:
+        url (str): the url of the dataset
+        path (str): the path to save the dataset
+    """
+
+    if os.path.exists(save_path):
+        return
+    else:
+        # Check if directory exists
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path))
+        print("Downloading " + save_path + " from " + url + " ..." + "\n")
+        response = requests.get(url, stream=True)
+        total_size_in_bytes = int(response.headers.get('content-length', 0))
+        block_size = 1024
+        progress_bar = tqdm(total=total_size_in_bytes, unit='iB',
+                            unit_scale=True)
+        with open(save_path, 'wb') as file:
+            for data in response.iter_content(block_size):
+                progress_bar.update(len(data))
+                file.write(data)
+        progress_bar.close()
+
+    # If the downloaded filename ends in tar.gz then extraact it
+    if save_path.endswith(".tar.gz"):
+       with tarfile.open(save_path) as tar:
+            tar.extractall(path=os.path.dirname(save_path))
+            print("Done!")
