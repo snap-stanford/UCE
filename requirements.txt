@@ -5,3 +5,5 @@ tqdm
 torch
 scanpy
 accelerator
+requests
+urllib3==1.26.6

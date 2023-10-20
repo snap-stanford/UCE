@@ -71,7 +71,7 @@ class AnndataProcessor:
                                 self.args.offset_pkl_path)
         if not os.path.exists(self.args.protein_embeddings_dir):
             figshare_download("https://figshare.com/ndownloader/files/42715213",
-                self.args.dir + '/protein_embeddings.tar.gz')
+                self.args.dir + 'model_files/protein_embeddings.tar.gz')
         figshare_download("https://figshare.com/ndownloader/files/42706585",
                                 self.args.token_file)
         if self.args.adata_path is None:
