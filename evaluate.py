@@ -228,7 +228,10 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
         for batch in pbar:
             batch_sentences, mask, idxs = batch[0], batch[1], batch[2]
             batch_sentences = batch_sentences.permute(1, 0)
-            batch_sentences = model.pe_embedding(batch_sentences.long())
+            if args.multi_gpu:
+                batch_sentences = model.module.pe_embedding(batch_sentences.long())
+            else:
+                batch_sentences = model.pe_embedding(batch_sentences.long())
             batch_sentences = nn.functional.normalize(batch_sentences,
                                                       dim=2)  # Normalize token outputs now
             _, embedding = model.forward(batch_sentences, mask=mask)

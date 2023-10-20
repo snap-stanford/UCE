@@ -50,6 +50,8 @@ Parameters:
     Offset index, tokens after this mark are chromosome identifiers.
 - `sample_size` (int):
     Number of genes sampled for cell sentence.
+- `multi_gpu` (bool):
+    Run evaluation on multiple GPUs (using accelerator)    
 
 Returns:
 -------
@@ -131,6 +133,8 @@ if __name__ == "__main__":
                         help='Hidden dimension.')
     parser.add_argument('--token_dim', type=int, default=5120,
                         help='Token dimension.')
+    parser.add_argument('--multi_gpu', type=bool, default=False,
+                        help='Use multiple GPUs')
 
     # Misc Arguments
     parser.add_argument("--spec_chrom_csv_path",
