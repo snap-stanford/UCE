@@ -116,7 +116,7 @@ def anndata_to_sc_dataset(adata:sc.AnnData,
                                  labels:list=[],
                                  covar_col:str=None,
                                  hv_genes=None,
-                                 embedding_model="ESM1b",
+                                 embedding_model="ESM2",
                                 ) -> (SincleCellDataset, AnnData):
     
     # Subset to just genes we have embeddings for
