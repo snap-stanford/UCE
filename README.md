@@ -36,3 +36,6 @@ identical to the proccessed input anndata, but have UCE embeddings added in the 
 Please see documentation for information on additional output files. All 
 outputs from `eval_single_anndata.py` are stored in the `dir` directory.
 
+## Data
+
+You can download proccessed datasets used in the papere [here](https://drive.google.com/drive/folders/1f63fh0ykgEhCrkd_EVvIootBw7LYDVI7?usp=drive_link)
