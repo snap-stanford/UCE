@@ -38,4 +38,4 @@ outputs from `eval_single_anndata.py` are stored in the `dir` directory.
 
 ## Data
 
-You can download proccessed datasets used in the papere [here](https://drive.google.com/drive/folders/1f63fh0ykgEhCrkd_EVvIootBw7LYDVI7?usp=drive_link)
+You can download processed datasets used in the papere [here](https://drive.google.com/drive/folders/1f63fh0ykgEhCrkd_EVvIootBw7LYDVI7?usp=drive_link)
