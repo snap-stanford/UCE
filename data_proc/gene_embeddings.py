@@ -8,64 +8,19 @@ from scanpy import AnnData
 import numpy as np
 
 
-EMBEDDING_DIR = Path('/dfs/project/cross-species/data/proteome/embeddings')
-FZ_EMBEDDING_DIR = Path('/dfs/project/cross-species/yanay/data/proteome/embeddings')
+EMBEDDING_DIR = Path('model_files/protein_embeddings')
 MODEL_TO_SPECIES_TO_GENE_EMBEDDING_PATH = {
-    'ESM1b': {
-        'human': EMBEDDING_DIR / 'Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM1b.pt',
-        'mouse': EMBEDDING_DIR / 'Mus_musculus.GRCm39.gene_symbol_to_embedding_ESM1b.pt',
-        'frog': FZ_EMBEDDING_DIR / 'Xenopus_tropicalis.Xenopus_tropicalis_v9.1.gene_symbol_to_embedding_ESM1b.pt',
-        #'frog': FZ_EMBEDDING_DIR / 'new_frog/xtropProtein.fasta.1.gene_symbol_to_embedding_ESM1b.pt',
-        'zebrafish': FZ_EMBEDDING_DIR / 'Danio_rerio.GRCz11.gene_symbol_to_embedding_ESM1b.pt',
-        'bat':  FZ_EMBEDDING_DIR / 'Rhinolophus_ferrumequinum.mRhiFer1_v1.gene_symbol_to_embedding_ESM1b.pt',
-        "mouse_lemur": FZ_EMBEDDING_DIR / "Microcebus_murinus.Mmur_3.0.gene_symbol_to_embedding_ESM1b.pt",
-        "sea_squirt": FZ_EMBEDDING_DIR / 'Ciona_intestinalis.KH.gene_symbol_to_embedding_ESM1b.pt',
-        "chicken": FZ_EMBEDDING_DIR / 'Gallus_gallus.GRCg6a.gene_symbol_to_embedding_ESM1b.pt',
-        "fly": FZ_EMBEDDING_DIR / 'Drosophila_melanogaster.BDGP6.32.gene_symbol_to_embedding_ESM1b.pt',
-        "pig": FZ_EMBEDDING_DIR / 'Sus_scrofa.Sscrofa11.1.gene_symbol_to_embedding_ESM1b.pt',
-        "macaca_fascicularis": FZ_EMBEDDING_DIR / 'Macaca_fascicularis.Macaca_fascicularis_6.0.gene_symbol_to_embedding_ESM1b.pt',
-        "macaca_mulatta": FZ_EMBEDDING_DIR / 'Macaca_mulatta.Mmul_10.gene_symbol_to_embedding_ESM1b.pt',
-        "rat": FZ_EMBEDDING_DIR / 'Rattus_norvegicus.mRatBN7.2.gene_symbol_to_embedding_ESM1b.pt',
-        "tree_shrew": FZ_EMBEDDING_DIR / 'Tupaia_belangeri.TREESHREW.gene_symbol_to_embedding_ESM1b.pt',
-        
-    },
-    'MSA1b': {
-        'human': EMBEDDING_DIR / 'Homo_sapiens.GRCh38.gene_symbol_to_embedding_MSA1b.pt',
-        'mouse': EMBEDDING_DIR / 'Mus_musculus.GRCm39.gene_symbol_to_embedding_MSA1b.pt'
-    },
-    "protXL": {
-        'human': FZ_EMBEDDING_DIR / 'Homo_sapiens.GRCh38.gene_symbol_to_embedding_protxl.pt',
-        'mouse': FZ_EMBEDDING_DIR / 'Mus_musculus.GRCm39.gene_symbol_to_embedding_protxl.pt',
-        'frog': FZ_EMBEDDING_DIR / 'Xenopus_tropicalis.Xenopus_tropicalis_v9.1.gene_symbol_to_embedding_protxl.pt',
-        #'frog': FZ_EMBEDDING_DIR / 'new_frog/xtropProtein.fasta.1.gene_symbol_to_embedding_ESM1b.pt',
-        'zebrafish': FZ_EMBEDDING_DIR / 'Danio_rerio.GRCz11.gene_symbol_to_embedding_protxl.pt',
-        #'bat':  FZ_EMBEDDING_DIR / 'Rhinolophus_ferrumequinum.mRhiFer1_v1.gene_symbol_to_embedding_ESM1b.pt',
-        #"mouse_lemur": FZ_EMBEDDING_DIR / "Microcebus_murinus.Mmur_3.0.gene_symbol_to_embedding_ESM1b.pt",
-        #"sea_squirt": FZ_EMBEDDING_DIR / 'Ciona_intestinalis.KH.gene_symbol_to_embedding_ESM1b.pt',
-        #"chicken": FZ_EMBEDDING_DIR / 'Gallus_gallus.GRCg6a.gene_symbol_to_embedding_ESM1b.pt',
-    },
-    "ESM1b_protref": {
-        'human': FZ_EMBEDDING_DIR / 'human.protref.gene_symbol_to_embedding_ESM1b.pt',
-        'mouse': FZ_EMBEDDING_DIR / 'mouse.protref.gene_symbol_to_embedding_ESM1b.pt',
-        'frog': FZ_EMBEDDING_DIR / 'frog.protref.gene_symbol_to_embedding_ESM1b.pt',
-        #'frog': FZ_EMBEDDING_DIR / 'new_frog/xtropProtein.fasta.1.gene_symbol_to_embedding_ESM1b.pt',
-        'zebrafish': FZ_EMBEDDING_DIR / 'zebrafish.protref.gene_symbol_to_embedding_ESM1b.pt',
-        #'bat':  FZ_EMBEDDING_DIR / 'Rhinolophus_ferrumequinum.mRhiFer1_v1.gene_symbol_to_embedding_ESM1b.pt',
-        #"mouse_lemur": FZ_EMBEDDING_DIR / "Microcebus_murinus.Mmur_3.0.gene_symbol_to_embedding_ESM1b.pt",
-        #"sea_squirt": FZ_EMBEDDING_DIR / 'Ciona_intestinalis.KH.gene_symbol_to_embedding_ESM1b.pt',
-        #"chicken": FZ_EMBEDDING_DIR / 'Gallus_gallus.GRCg6a.gene_symbol_to_embedding_ESM1b.pt',
-    },
     'ESM2': {
-        'human': FZ_EMBEDDING_DIR / 'Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt',
-        'mouse': FZ_EMBEDDING_DIR / 'Mus_musculus.GRCm39.gene_symbol_to_embedding_ESM2.pt',
-        'frog': FZ_EMBEDDING_DIR / 'Xenopus_tropicalis.Xenopus_tropicalis_v9.1.gene_symbol_to_embedding_ESM2.pt',
+        'human': EMBEDDING_DIR / 'Homo_sapiens.GRCh38.gene_symbol_to_embedding_ESM2.pt',
+        'mouse': EMBEDDING_DIR / 'Mus_musculus.GRCm39.gene_symbol_to_embedding_ESM2.pt',
+        'frog': EMBEDDING_DIR / 'Xenopus_tropicalis.Xenopus_tropicalis_v9.1.gene_symbol_to_embedding_ESM2.pt',
         
-        'zebrafish': FZ_EMBEDDING_DIR / 'Danio_rerio.GRCz11.gene_symbol_to_embedding_ESM2.pt',
-        "mouse_lemur": FZ_EMBEDDING_DIR / "Microcebus_murinus.Mmur_3.0.gene_symbol_to_embedding_ESM2.pt",
-        "pig": FZ_EMBEDDING_DIR / 'Sus_scrofa.Sscrofa11.1.gene_symbol_to_embedding_ESM2.pt',
-        "macaca_fascicularis": FZ_EMBEDDING_DIR / 'Macaca_fascicularis.Macaca_fascicularis_6.0.gene_symbol_to_embedding_ESM2.pt',
-        "macaca_mulatta": FZ_EMBEDDING_DIR / 'Macaca_mulatta.Mmul_10.gene_symbol_to_embedding_ESM2.pt',
-    },
+        'zebrafish': EMBEDDING_DIR / 'Danio_rerio.GRCz11.gene_symbol_to_embedding_ESM2.pt',
+        "mouse_lemur": EMBEDDING_DIR / "Microcebus_murinus.Mmur_3.0.gene_symbol_to_embedding_ESM2.pt",
+        "pig": EMBEDDING_DIR / 'Sus_scrofa.Sscrofa11.1.gene_symbol_to_embedding_ESM2.pt',
+        "macaca_fascicularis": EMBEDDING_DIR / 'Macaca_fascicularis.Macaca_fascicularis_6.0.gene_symbol_to_embedding_ESM2.pt',
+        "macaca_mulatta": EMBEDDING_DIR / 'Macaca_mulatta.Mmul_10.gene_symbol_to_embedding_ESM2.pt',
+    }
 }
 
 
