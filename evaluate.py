@@ -202,6 +202,13 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
     model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
     model.load_state_dict(torch.load(args.model_loc, map_location="cpu"),
                           strict=True)
+    
+    # NOTE: This is a temporary fix. The state_dict contains token files so overwrites the tokens.
+    # this creates problems when using new token files, for species not in the training data.
+    # here, as a fix, we just reload the token file as the embeddings.
+    all_pe = torch.load(args.token_file)
+    all_pe.requires_grad = False
+    model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
     print(f"Loaded model:\n{args.model_loc}")
     model = model.eval()
     model = accelerator.prepare(model)
