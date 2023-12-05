@@ -175,8 +175,9 @@ def process_raw_anndata(row, h5_folder_path, npz_folder_path, scp, skip,
         path = row.path
         if not os.path.isfile(root + "/" + path):
             print( "**********************************")
-            print(f"***********{path} ERROR***********")
+            print(f"***********{root + '/' + path} File Missing****")
             print( "**********************************")
+            print(path, root)
             return None
 
         name = path.replace(".h5ad", "")
@@ -254,7 +255,11 @@ def get_species_to_pe(EMBEDDING_DIR):
             "macaca_fascicularis": EMBEDDING_DIR / 'Macaca_fascicularis.Macaca_fascicularis_6.0.gene_symbol_to_embedding_ESM2.pt',
             "macaca_mulatta": EMBEDDING_DIR / 'Macaca_mulatta.Mmul_10.gene_symbol_to_embedding_ESM2.pt',
         }
-
+    extra_species = pd.read_csv("./model_files/new_species_protein_embeddings.csv").set_index("species").to_dict()["path"]
+    embeddings_paths.update(extra_species) # adds new species
+    
+    
+    
     species_to_pe = {
         species:torch.load(pe_dir) for species, pe_dir in embeddings_paths.items()   
     }

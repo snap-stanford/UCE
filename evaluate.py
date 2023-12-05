@@ -196,19 +196,19 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
                              output_dim=args.output_dim)
     if args.model_loc is None:
         raise ValueError("Must provide a model location")
-
-    all_pe = get_ESM2_embeddings(args)
-    all_pe.requires_grad = False
-    model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
+    # intialize as empty
+    empty_pe = torch.zeros(145469, 5120)
+    empty_pe.requires_grad = False
+    model.pe_embedding = nn.Embedding.from_pretrained(empty_pe)
     model.load_state_dict(torch.load(args.model_loc, map_location="cpu"),
                           strict=True)
-    
-    # NOTE: This is a temporary fix. The state_dict contains token files so overwrites the tokens.
-    # this creates problems when using new token files, for species not in the training data.
-    # here, as a fix, we just reload the token file as the embeddings.
-    all_pe = torch.load(args.token_file)
-    all_pe.requires_grad = False
-    model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
+    # Load in the real token embeddings
+    all_pe = get_ESM2_embeddings(args)
+    # This will make sure that you don't overwrite the tokens in case you're embedding species from the training data
+    # We avoid doing that just in case the random seeds are different across different versions. 
+    if all_pe.shape[0] != 145469: 
+        all_pe.requires_grad = False
+        model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
     print(f"Loaded model:\n{args.model_loc}")
     model = model.eval()
     model = accelerator.prepare(model)
