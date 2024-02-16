@@ -23,7 +23,8 @@ MODEL_TO_SPECIES_TO_GENE_EMBEDDING_PATH = {
     }
 }
 
-extra_species = pd.read_csv("./model_files/new_species_protein_embeddings.csv").set_index("species").to_dict()["path"]
+# extra_species = pd.read_csv("model_files/new_species_protein_embeddings.csv").set_index("species").to_dict()["path"]
+extra_species = pd.DataFrame({'species': [], 'path': []}).set_index("species").to_dict()["path"]
 MODEL_TO_SPECIES_TO_GENE_EMBEDDING_PATH["ESM2"].update(extra_species) # adds new species
 
 

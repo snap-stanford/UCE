@@ -28,9 +28,10 @@ from torch.utils.data import DataLoader, TensorDataset, dataset
 from scipy.stats import binom
 from typing import Dict, List, Optional, Tuple
 from scanpy import AnnData
+import subprocess
 
 
-from data_proc.gene_embeddings import load_gene_embeddings_adata
+from uce.data_proc.gene_embeddings import load_gene_embeddings_adata
 
 def data_to_torch_X(X):
     if isinstance(X, sc.AnnData):

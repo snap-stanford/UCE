@@ -1,13 +1,14 @@
 import os
 
 # os.environ["NCCL_DEBUG"] = "INFO"
-os.environ["OMP_NUM_THREADS"] = "12"  # export OMP_NUM_THREADS=4
-os.environ["OPENBLAS_NUM_THREADS"] = "12"  # export OPENBLAS_NUM_THREADS=4
-os.environ["MKL_NUM_THREADS"] = "12"  # export MKL_NUM_THREADS=6
-os.environ["VECLIB_MAXIMUM_THREADS"] = "12"  # export VECLIB_MAXIMUM_THREADS=4
-os.environ["NUMEXPR_NUM_THREADS"] = "12"
+# os.environ["OMP_NUM_THREADS"] = "12"  # export OMP_NUM_THREADS=4
+# os.environ["OPENBLAS_NUM_THREADS"] = "12"  # export OPENBLAS_NUM_THREADS=4
+# os.environ["MKL_NUM_THREADS"] = "12"  # export MKL_NUM_THREADS=6
+# os.environ["VECLIB_MAXIMUM_THREADS"] = "12"  # export VECLIB_MAXIMUM_THREADS=4
+# os.environ["NUMEXPR_NUM_THREADS"] = "12"
 
 import warnings
+from dataclasses import dataclass
 
 warnings.filterwarnings("ignore")
 
@@ -15,19 +16,21 @@ import scanpy as sc
 from tqdm.auto import tqdm
 from torch import nn, Tensor
 
-from model import TransformerModel
-from eval_data import MultiDatasetSentences, MultiDatasetSentenceCollator
-from utils import figshare_download
 
 from torch.utils.data import DataLoader
-from data_proc.data_utils import adata_path_to_prot_chrom_starts, \
-    get_spec_chrom_csv, process_raw_anndata, get_species_to_pe
 
 import os
 import pickle
 import pandas as pd
 import numpy as np
 import torch
+from typing import Literal, Optional, TypedDict
+
+from uce.model import TransformerModel
+from uce.eval_data import MultiDatasetSentences, MultiDatasetSentenceCollator
+from uce.utils import figshare_download
+from uce.data_proc.data_utils import adata_path_to_prot_chrom_starts, \
+    get_spec_chrom_csv, process_raw_anndata, get_species_to_pe
 
 
 class AnndataProcessor:
@@ -89,7 +92,7 @@ class AnndataProcessor:
 
 
     def preprocess_anndata(self):
-        if self.accelerator.is_main_process:
+        if self.accelerator is None or self.accelerator.is_main_process:
             self.adata, num_cells, num_genes = \
                 process_raw_anndata(self.row,
                                     self.h5_folder_path,
@@ -112,7 +115,7 @@ class AnndataProcessor:
             print("Wrote Shapes Dict")
 
     def generate_idxs(self):
-        if self.accelerator.is_main_process:
+        if self.accelerator is None or self.accelerator.is_main_process:
             if os.path.exists(self.pe_idx_path) and \
                     os.path.exists(self.chroms_path) and \
                     os.path.exists(self.starts_path):
@@ -178,6 +181,42 @@ def padding_tensor(sequences):
         out_tensor[i, :length] = tensor
         mask[i, :length] = 1
     return out_tensor.permute(1, 0, 2), mask
+
+def get_eval_model(args):
+    emsize = 1280  # embedding dimension
+    nhead = 20  # number of heads in nn.MultiheadAttention
+    dropout = 0.05  # dropout probability
+    token_dim = args.token_dim
+    d_hid = args.d_hid  # dimension of the feedforward network model in nn.TransformerEncoder
+    nlayers = args.nlayers  # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+    model = TransformerModel(
+        token_dim=token_dim,
+        d_model=emsize,
+        nhead=nhead,
+        d_hid=d_hid,
+        nlayers=nlayers,
+        dropout=dropout,
+        output_dim=args.output_dim
+    )
+    if args.model_loc is None:
+        raise ValueError("Must provide a model location")
+
+    # intialize as empty
+    empty_pe = torch.zeros(145469, 5120, requires_grad=False)
+    # empty_pe.requires_grad = False
+    model.pe_embedding = nn.Embedding.from_pretrained(empty_pe)
+    model.load_state_dict(torch.load(args.model_loc, map_location="cpu"),
+                          strict=True)
+    # Load in the real token embeddings
+    all_pe = get_ESM2_embeddings(args)
+    # This will make sure that you don't overwrite the tokens in case you're embedding species from the training data
+    # We avoid doing that just in case the random seeds are different across different versions. 
+    if all_pe.shape[0] != 145469: 
+        all_pe.requires_grad = False
+        model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
+    model.eval()
+    return model
+    
 
 
 def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
@@ -257,3 +296,65 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
 
         print("*****Wrote Anndata to:*****")
         print(write_path)
+
+def get_pretrained_model(size: Literal['small', 'large']) -> TransformerModel:
+    assert size in ('small', 'large'), "size parameter must be either 'small' or 'large'"
+    if size == 'large':
+        raise NotImplementedError('Automatic fetching of the large model is not implemented yet')
+    print('Loading small pretrained model with 4 layers...')
+    from uce.eval_single_anndata import parser
+    default_args = parser.parse_args([])
+    if default_args.model_loc is None:
+        print("Using sample 4 layer model")
+        default_args.model_loc = "./model_files/4layer_model.torch"
+        figshare_download(
+            "https://figshare.com/ndownloader/files/42706576",
+            default_args.model_loc)
+    return get_eval_model(default_args)
+
+
+@dataclass
+class DatasetFile:
+    """Corresponds to flags in the `uce-eval-single-anndata` cli"""
+    adata_path: Optional[str] = None
+    species: str = 'human'
+    filter: bool = True
+    skip: bool = True
+
+class DatasetFileDict(TypedDict, total=False):
+    adata_path: str
+    species: str
+    filter: bool
+    skip: bool
+
+
+def get_processed_dataset(dataset_file: Optional[DatasetFile | DatasetFileDict] = None, batch_size: int = 1) -> tuple[MultiDatasetSentences, DataLoader]:
+    from uce.eval_single_anndata import parser
+    args = parser.parse_args([])
+    if dataset_file is not None:
+        if isinstance(dataset_file, dict):
+            dataset_file = DatasetFile(**dataset_file)
+        args.adata_path = dataset_file.adata_path
+        args.species = dataset_file.species
+        args.filter = dataset_file.filter
+        args.skip = dataset_file.skip
+
+    processor = AnndataProcessor(args=args, accelerator=None)
+    processor.preprocess_anndata()
+    processor.generate_idxs()
+    with open(processor.shapes_dict_path, "rb") as f:
+        shapes_dict = pickle.load(f)
+
+    dataset = MultiDatasetSentences(sorted_dataset_names=[processor.name],
+                                    shapes_dict=shapes_dict,
+                                    args=args, npzs_dir=args.dir,
+                                    dataset_to_protein_embeddings_path=processor.pe_idx_path,
+                                    datasets_to_chroms_path=processor.chroms_path,
+                                    datasets_to_starts_path=processor.starts_path
+                                    )
+    multi_dataset_sentence_collator = MultiDatasetSentenceCollator(args)
+
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                            collate_fn=multi_dataset_sentence_collator,
+                            num_workers=10, pin_memory=True)
+    return dataset, dataloader

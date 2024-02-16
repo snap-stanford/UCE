@@ -26,7 +26,7 @@ from gene_embeddings import load_gene_embeddings_adata
 import pandas as pd
 import numpy as np
 from scanpy import AnnData
-from data_utils import process_raw_anndata
+from uce.data_proc.data_utils import process_raw_anndata
 
 def data_to_torch_X(X):
     if isinstance(X, sc.AnnData):

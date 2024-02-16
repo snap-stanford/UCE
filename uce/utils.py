@@ -101,3 +101,6 @@ def figshare_download(url, save_path):
        with tarfile.open(save_path) as tar:
             tar.extractall(path=os.path.dirname(save_path))
             print("Done!")
+
+def set_global_parameter(**kwargs):
+    

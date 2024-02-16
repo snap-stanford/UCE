@@ -1,0 +1,43 @@
+[build-system]
+# Need setuptools-scm to determine which files are tracked by git and should be included in the package. Finds the data file in uce/data_proc/.
+requires = ["setuptools >= 61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uce-model"
+description = "Universal Cell Embedding model for single-cell RNA-seq data"
+version = "0.1.1"
+requires-python = ">=3.7"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["single-cell", "RNA-seq", "embedding", "pytorch", "uce"]
+dependencies = [
+    "torch",
+    "numpy",
+    "scipy",
+    "pandas",
+    "tqdm",
+    "torch",
+    "scanpy",
+    "accelerate",
+    "requests",
+    "urllib3",
+]
+authors = [
+    {name = "Yanay Rosen", email = "yanay@stanford.edu"}
+]
+
+[tool.setuptools.packages.find]
+include = ["uce*"]
+
+[project.urls]
+Homepage = "https://github.com/snap-stanford/UCE"
+Repository = "https://github.com/snap-stanford/UCE.git"
+
+[project.scripts]
+uce-eval-single-anndata = "uce.eval_single_anndata:main"
+
+# [project.optional-dependencies]
+# train = [
+#     "accelerate"
+# ]

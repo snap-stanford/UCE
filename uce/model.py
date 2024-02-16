@@ -112,4 +112,3 @@ class TransformerModel(nn.Module):
         dec = self.binary_decoder \
             (torch.hstack((cell_embedding, gene_embeddings)))
         return dec
-
