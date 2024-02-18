@@ -233,6 +233,7 @@ def get_eval_model(args):
     model.load_state_dict(torch.load(args.model_loc, map_location="cpu"),
                           strict=True)
     # Load in the real token embeddings
+    download_file('token_file', args.token_file)
     all_pe = get_ESM2_embeddings(args)
     # This will make sure that you don't overwrite the tokens in case you're embedding species from the training data
     # We avoid doing that just in case the random seeds are different across different versions. 
