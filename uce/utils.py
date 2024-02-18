@@ -11,6 +11,7 @@ import os
 import requests
 from tqdm import tqdm
 import tarfile
+import gdown
 
 
 def get_shapes_dict(dataset_path):
@@ -96,11 +97,31 @@ def figshare_download(url, save_path):
                 file.write(data)
         progress_bar.close()
 
-    # If the downloaded filename ends in tar.gz then extraact it
+    # If the downloaded filename ends in tar.gz then extract it
     if save_path.endswith(".tar.gz"):
        with tarfile.open(save_path) as tar:
             tar.extractall(path=os.path.dirname(save_path))
             print("Done!")
 
-def set_global_parameter(**kwargs):
+def gdrive_download(url, save_path):
+    """
+    Google Drive download helper with progress bar
+
+    Args:
+        url (str): the url of the dataset
+        path (str): the path to save the dataset
+    """
+
+    if os.path.exists(save_path):
+        return
+    else:
+        # Check if directory exists
+        if not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path))
+        print("Downloading " + save_path + " from " + url + " ..." + "\n")
+        gdown.download(url, save_path, quiet=False, fuzzy=True)
     
+    # If the downloaded filename ends in tar.gz then extract it
+    if save_path.endswith(".tar.gz"):
+       with tarfile.open(save_path) as tar:
+            tar.extractall(path=os.path.dirname(save_path))

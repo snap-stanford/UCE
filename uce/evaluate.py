@@ -28,9 +28,38 @@ from typing import Literal, Optional, TypedDict
 
 from uce.model import TransformerModel
 from uce.eval_data import MultiDatasetSentences, MultiDatasetSentenceCollator
-from uce.utils import figshare_download
+from uce.utils import figshare_download, gdrive_download
 from uce.data_proc.data_utils import adata_path_to_prot_chrom_starts, \
     get_spec_chrom_csv, process_raw_anndata, get_species_to_pe
+
+DOWNLOAD_HOST = "gdrive"
+
+download_urls = {
+    "figshare": {
+        "spec_chrom_csv": "https://figshare.com/ndownloader/files/42706558",
+        "offset_pkl": "https://figshare.com/ndownloader/files/42706555",
+        "protein_embeddings": "https://figshare.com/ndownloader/files/42715213",
+        "token_file": "https://figshare.com/ndownloader/files/42706585",
+        "10k_pbmcs_adata": "https://figshare.com/ndownloader/files/42706966",
+        "model4": "https://figshare.com/ndownloader/files/42706576",
+    },
+    "gdrive": {
+        "spec_chrom_csv": "https://drive.google.com/file/d/1vKmaf_Xc14ZlBUTF1duu5ufXtUlfp_fG/view?usp=drive_link",
+        "offset_pkl": "https://drive.google.com/file/d/1y20kSv_DfpozOUDhTtaChBRYxXybzGHq/view?usp=drive_link",
+        "protein_embeddings": "https://drive.google.com/file/d/1olyRrF5cQX2P2O5or_jKHqZeJZVcgKpT/view?usp=drive_link",
+        "token_file": "https://drive.google.com/file/d/1wYDhaO6rIW3X5IJJd7xwyesaOOIYuB57/view?usp=drive_link",
+        "10k_pbmcs_adata": "https://drive.google.com/file/d/16ua2ctevSwZB1zhqIf1uffZKk538IMwP/view?usp=drive_link",
+        "model4": "https://drive.google.com/file/d/1nQMQcCMtJpyAGmuAf35O4YwWJiYeUC2C/view?usp=drive_link",
+    }
+}
+
+def download_file(file_tag: str, path: str):
+    if DOWNLOAD_HOST == "figshare":
+        figshare_download(download_urls["figshare"][file_tag], path)
+    elif DOWNLOAD_HOST == "gdrive":
+        gdrive_download(download_urls["gdrive"][file_tag], path)
+    else:
+        raise ValueError(f"Unknown download host: {DOWNLOAD_HOST}")
 
 
 class AnndataProcessor:
@@ -68,26 +97,22 @@ class AnndataProcessor:
         """
         Check if the paths exist, if not, create them
         """
-        figshare_download("https://figshare.com/ndownloader/files/42706558",
-                                self.args.spec_chrom_csv_path)
-        figshare_download("https://figshare.com/ndownloader/files/42706555",
-                                self.args.offset_pkl_path)
+        download_file("spec_chrom_csv", self.args.spec_chrom_csv_path)
+        download_file("offset_pkl", self.args.offset_pkl_path)
         if not os.path.exists(self.args.protein_embeddings_dir):
-            figshare_download("https://figshare.com/ndownloader/files/42715213",
-                'model_files/protein_embeddings.tar.gz')
-        figshare_download("https://figshare.com/ndownloader/files/42706585",
-                                self.args.token_file)
+            download_file("protein_embeddings", 'model_files/protein_embeddings.tar.gz')
+        download_file("token_file", self.args.token_file)
         if self.args.adata_path is None:
             print("Using sample AnnData: 10k pbmcs dataset")
             self.args.adata_path = "./data/10k_pbmcs_proc.h5ad"
-            figshare_download(
-                "https://figshare.com/ndownloader/files/42706966",
+            download_file(
+                "10k_pbmcs_adata",
                 self.args.adata_path)
         if self.args.model_loc is None:
             print("Using sample 4 layer model")
             self.args.model_loc = "./model_files/4layer_model.torch"
-            figshare_download(
-                "https://figshare.com/ndownloader/files/42706576",
+            download_file(
+                "model4",
                 self.args.model_loc)
 
 
@@ -249,7 +274,8 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
         all_pe.requires_grad = False
         model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
     print(f"Loaded model:\n{args.model_loc}")
-    model = model.eval()
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = model.eval().to(device)
     model = accelerator.prepare(model)
     batch_size = args.batch_size
 
@@ -266,6 +292,7 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
                             collate_fn=multi_dataset_sentence_collator,
+                            pin_memory=True,
                             num_workers=0)
     dataloader = accelerator.prepare(dataloader)
     pbar = tqdm(dataloader, disable=not accelerator.is_local_main_process)
@@ -273,14 +300,14 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
     with torch.no_grad():
         for batch in pbar:
             batch_sentences, mask, idxs = batch[0], batch[1], batch[2]
-            batch_sentences = batch_sentences.permute(1, 0)
+            batch_sentences = batch_sentences.permute(1, 0).to(device)
             if args.multi_gpu:
                 batch_sentences = model.module.pe_embedding(batch_sentences.long())
             else:
                 batch_sentences = model.pe_embedding(batch_sentences.long())
             batch_sentences = nn.functional.normalize(batch_sentences,
                                                       dim=2)  # Normalize token outputs now
-            _, embedding = model.forward(batch_sentences, mask=mask)
+            _, embedding = model.forward(batch_sentences, mask=mask.to(device))
             # Fix for duplicates in last batch
             accelerator.wait_for_everyone()
             embeddings = accelerator.gather_for_metrics((embedding))
@@ -307,8 +334,8 @@ def get_pretrained_model(size: Literal['small', 'large']) -> TransformerModel:
     if default_args.model_loc is None:
         print("Using sample 4 layer model")
         default_args.model_loc = "./model_files/4layer_model.torch"
-        figshare_download(
-            "https://figshare.com/ndownloader/files/42706576",
+        download_file(
+            "model4",
             default_args.model_loc)
     return get_eval_model(default_args)
 
