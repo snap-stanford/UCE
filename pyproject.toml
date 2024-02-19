@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "uce-model"
 description = "Universal Cell Embedding model for single-cell RNA-seq data"
-version = "0.1.3"
+version = "0.1.4"
 requires-python = ">=3.8"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -37,6 +37,12 @@ Repository = "https://github.com/snap-stanford/UCE.git"
 
 [project.scripts]
 uce-eval-single-anndata = "uce.eval_single_anndata:main"
+
+[tool.ruff]
+target-version = "py38"
+
+[tool.ruff.lint]
+ignore = ["E402"]
 
 # [project.optional-dependencies]
 # train = [

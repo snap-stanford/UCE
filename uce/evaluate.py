@@ -1,12 +1,5 @@
 import os
 
-# os.environ["NCCL_DEBUG"] = "INFO"
-# os.environ["OMP_NUM_THREADS"] = "12"  # export OMP_NUM_THREADS=4
-# os.environ["OPENBLAS_NUM_THREADS"] = "12"  # export OPENBLAS_NUM_THREADS=4
-# os.environ["MKL_NUM_THREADS"] = "12"  # export MKL_NUM_THREADS=6
-# os.environ["VECLIB_MAXIMUM_THREADS"] = "12"  # export VECLIB_MAXIMUM_THREADS=4
-# os.environ["NUMEXPR_NUM_THREADS"] = "12"
-
 import warnings
 from dataclasses import dataclass
 
@@ -14,17 +7,16 @@ warnings.filterwarnings("ignore")
 
 import scanpy as sc
 from tqdm.auto import tqdm
-from torch import nn, Tensor
+from torch import nn
 
 
 from torch.utils.data import DataLoader
 
-import os
 import pickle
 import pandas as pd
 import numpy as np
 import torch
-from typing import Literal, Optional, TypedDict
+from typing import Literal, Optional, TypedDict, Tuple
 
 from uce.model import TransformerModel
 from uce.eval_data import MultiDatasetSentences, MultiDatasetSentenceCollator
@@ -300,7 +292,7 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
     dataset_embeds = []
     with torch.no_grad():
         for batch in pbar:
-            batch_sentences, mask, idxs = batch[0], batch[1], batch[2]
+            batch_sentences, mask, _idxs = batch[0], batch[1], batch[2]
             batch_sentences = batch_sentences.permute(1, 0).to(device)
             if args.multi_gpu:
                 batch_sentences = model.module.pe_embedding(batch_sentences.long())
@@ -356,7 +348,15 @@ class DatasetFileDict(TypedDict, total=False):
     skip: bool
 
 
-def get_processed_dataset(dataset_file: Optional[DatasetFile | DatasetFileDict] = None, batch_size: int = 1) -> tuple[MultiDatasetSentences, DataLoader]:
+def get_processed_dataset(dataset_file: Optional[DatasetFile | DatasetFileDict] = None, batch_size: int = 1) -> Tuple[MultiDatasetSentences, DataLoader]:
+    """
+    Get a preprocessed dataset along with a dataloader to load it.
+
+    Args:
+        dataset_file: Instance of uce.evaluate.DatasetFile or a dictionary with the same keys (adata_path, species, filter, skip).
+                      See the command line arguments of `uce-eval-single-anndata` for more details of what these arguments do.
+        batch_size: Batch size for the dataloader.
+    """
     from uce.eval_single_anndata import parser
     args = parser.parse_args([])
     if dataset_file is not None:

@@ -128,9 +128,10 @@ import uce
 model = uce.get_pretrained('small')  # 'small' gets a 4-layer model, 'large' gets a 33-layer model
 ```
 
-You can also set up a dataloader and a dataset to embed a new dataset using the model.
+You can also set up a dataloader and a dataset to embed it from Python.
+See the documentation for `uce.get_processed_dataset` for more information.
 ```python
-
+dataset, dataloader = uce.get_processed_dataset(batch_size=32)  # Get default dataset
 ```
 
 ## Citing
