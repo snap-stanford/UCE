@@ -19,7 +19,7 @@ dependencies:
   - requests
   - urllib3==1.26.6  
   - scanpy
-  # - igraph-python
+  # - python-igraph
   # - leidenalg
   - ipykernel 
   - pip 
