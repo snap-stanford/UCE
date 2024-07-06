@@ -76,10 +76,9 @@ Returns:
 
 import argparse
 from evaluate import AnndataProcessor
-from accelerate import Accelerator
 
-def main(args, accelerator):
-    processor = AnndataProcessor(args, accelerator)
+def main(args):
+    processor = AnndataProcessor(args)
     processor.preprocess_anndata()
     processor.generate_idxs()
     processor.run_evaluation()
@@ -131,11 +130,13 @@ if __name__ == "__main__":
                         help='Output dimension.')
     parser.add_argument('--d_hid', type=int, default=5120,
                         help='Hidden dimension.')
+    parser.add_argument('--emsize', type=int, default=768,
+                        help='Transformer Embed Dim.')
     parser.add_argument('--token_dim', type=int, default=5120,
                         help='Token dimension.')
     parser.add_argument('--multi_gpu', type=bool, default=False,
                         help='Use multiple GPUs')
-
+    parser.add_argument('--nhead', type=int, default=8, help='Transformer number of heads')
     # Misc Arguments
     parser.add_argument("--spec_chrom_csv_path",
                         default="./model_files/species_chrom.csv", type=str,
@@ -149,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("--offset_pkl_path",
                         default="./model_files/species_offsets.pkl", type=str,
                         help="PKL file which contains offsets for each species.")
-
+    parser.add_argument('--num_nodes', type=int, default=1, help='Number of training nodes')
+    parser.add_argument('--compiled', action='store_true', help='Whether the code is compiled')
     args = parser.parse_args()
-    accelerator = Accelerator(project_dir=args.dir)
-    main(args, accelerator)
+    main(args)

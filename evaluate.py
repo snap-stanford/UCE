@@ -15,9 +15,13 @@ import scanpy as sc
 from tqdm.auto import tqdm
 from torch import nn, Tensor
 
-from model import TransformerModel
+from lit_model import LitUCEModel
 from eval_data import MultiDatasetSentences, MultiDatasetSentenceCollator
 from utils import figshare_download
+import lightning as L
+from lightning.pytorch.callbacks import RichProgressBar
+from lightning.pytorch.strategies import DeepSpeedStrategy, DDPStrategy
+from lightning.pytorch.callbacks import BasePredictionWriter
 
 from torch.utils.data import DataLoader
 from data_proc.data_utils import adata_path_to_prot_chrom_starts, \
@@ -31,9 +35,9 @@ import torch
 
 
 class AnndataProcessor:
-    def __init__(self, args, accelerator):
+    def __init__(self, args):
         self.args = args
-        self.accelerator = accelerator
+        
         self.h5_folder_path = self.args.dir
         self.npz_folder_path = self.args.dir
         self.scp = ""
@@ -89,21 +93,20 @@ class AnndataProcessor:
 
 
     def preprocess_anndata(self):
-        if self.accelerator.is_main_process:
-            self.adata, num_cells, num_genes = \
-                process_raw_anndata(self.row,
-                                    self.h5_folder_path,
-                                    self.npz_folder_path,
-                                    self.scp,
-                                    self.args.skip,
-                                    self.args.filter,
-                                    root=self.adata_root_path)
-            if (num_cells is not None) and (num_genes is not None):
-                self.save_shapes_dict(self.name, num_cells, num_genes,
-                                       self.shapes_dict_path)
+        self.adata, num_cells, num_genes = \
+            process_raw_anndata(self.row,
+                                self.h5_folder_path,
+                                self.npz_folder_path,
+                                self.scp,
+                                self.args.skip,
+                                self.args.filter,
+                                root=self.adata_root_path)
+        if (num_cells is not None) and (num_genes is not None):
+            self.save_shapes_dict(self.name, num_cells, num_genes,
+                                   self.shapes_dict_path)
 
-            if self.adata is None:
-                self.adata = sc.read(self.proc_h5_path)
+        if self.adata is None:
+            self.adata = sc.read(self.proc_h5_path)
 
     def save_shapes_dict(self, name, num_cells, num_genes, shapes_dict_path):
         shapes_dict = {name: (num_cells, num_genes)}
@@ -112,38 +115,37 @@ class AnndataProcessor:
             print("Wrote Shapes Dict")
 
     def generate_idxs(self):
-        if self.accelerator.is_main_process:
-            if os.path.exists(self.pe_idx_path) and \
-                    os.path.exists(self.chroms_path) and \
-                    os.path.exists(self.starts_path):
-                print("PE Idx, Chrom and Starts files already created")
+        if os.path.exists(self.pe_idx_path) and \
+                os.path.exists(self.chroms_path) and \
+                os.path.exists(self.starts_path):
+            print("PE Idx, Chrom and Starts files already created")
 
-            else:
-                species_to_pe = get_species_to_pe(self.args.protein_embeddings_dir)
-                with open(self.args.offset_pkl_path, "rb") as f:
-                    species_to_offsets = pickle.load(f)
+        else:
+            species_to_pe = get_species_to_pe(self.args.protein_embeddings_dir)
+            with open(self.args.offset_pkl_path, "rb") as f:
+                species_to_offsets = pickle.load(f)
 
-                gene_to_chrom_pos = get_spec_chrom_csv(
-                    self.args.spec_chrom_csv_path)
-                dataset_species = self.args.species
-                spec_pe_genes = list(species_to_pe[dataset_species].keys())
-                offset = species_to_offsets[dataset_species]
-                pe_row_idxs, dataset_chroms, dataset_pos = adata_path_to_prot_chrom_starts(
-                    self.adata, dataset_species, spec_pe_genes, gene_to_chrom_pos, offset)
+            gene_to_chrom_pos = get_spec_chrom_csv(
+                self.args.spec_chrom_csv_path)
+            dataset_species = self.args.species
+            spec_pe_genes = list(species_to_pe[dataset_species].keys())
+            offset = species_to_offsets[dataset_species]
+            pe_row_idxs, dataset_chroms, dataset_pos = adata_path_to_prot_chrom_starts(
+                self.adata, dataset_species, spec_pe_genes, gene_to_chrom_pos, offset)
 
-                # Save to the temp dict
-                torch.save({self.name: pe_row_idxs}, self.pe_idx_path)
-                with open(self.chroms_path, "wb+") as f:
-                    pickle.dump({self.name: dataset_chroms}, f)
-                with open(self.starts_path, "wb+") as f:
-                    pickle.dump({self.name: dataset_pos}, f)
+            # Save to the temp dict
+            torch.save({self.name: pe_row_idxs}, self.pe_idx_path)
+            with open(self.chroms_path, "wb+") as f:
+                pickle.dump({self.name: dataset_chroms}, f)
+            with open(self.starts_path, "wb+") as f:
+                pickle.dump({self.name: dataset_pos}, f)
 
     def run_evaluation(self):
-        self.accelerator.wait_for_everyone()
+        
         with open(self.shapes_dict_path, "rb") as f:
             shapes_dict = pickle.load(f)
         run_eval(self.adata, self.name, self.pe_idx_path, self.chroms_path,
-                 self.starts_path, shapes_dict, self.accelerator, self.args)
+                 self.starts_path, shapes_dict, self.args)
 
 
 def get_ESM2_embeddings(args):
@@ -179,10 +181,28 @@ def padding_tensor(sequences):
         mask[i, :length] = 1
     return out_tensor.permute(1, 0, 2), mask
 
+def flatten(xss):
+    return [x for xs in xss for x in xs]
+
+
+class CustomWriter(BasePredictionWriter):
+    def __init__(self, output_dir, write_interval):
+        super().__init__(write_interval)
+        self.output_dir = output_dir
+
+    def write_on_epoch_end(self, trainer, pl_module, predictions, batch_indices):
+        # this will create N (num processes) files in `output_dir` each containing
+        # the predictions of it's respective rank
+        torch.save(predictions, os.path.join(self.output_dir, f"embeddings_{trainer.global_rank}.pt"))
+
+        # optionally, you can also save `batch_indices` to get the information about the data index
+        # from your prediction data
+        torch.save(batch_indices, os.path.join(self.output_dir, f"batch_indices_{trainer.global_rank}.pt"))
+
 
 def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
-             accelerator, args):
-
+             args):
+    torch.set_float32_matmul_precision('medium')
     #### Set up the model ####
     token_dim = args.token_dim
     emsize = 1280  # embedding dimension
@@ -190,28 +210,31 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
     nlayers = args.nlayers  # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 20  # number of heads in nn.MultiheadAttention
     dropout = 0.05  # dropout probability
-    model = TransformerModel(token_dim=token_dim, d_model=emsize, nhead=nhead,
-                             d_hid=d_hid,
-                             nlayers=nlayers, dropout=dropout,
-                             output_dim=args.output_dim)
+    '''
+    model = LitUCEModel(token_dim=args.token_dim,
+                         d_model=args.emsize,
+                         nhead=args.nhead,
+                         d_hid=args.d_hid,
+                         nlayers=args.nlayers,
+                         output_dim=args.output_dim,
+                         dropout=0
+                       )
+    '''
     if args.model_loc is None:
         raise ValueError("Must provide a model location")
     # intialize as empty
-    empty_pe = torch.zeros(145469, 5120)
-    empty_pe.requires_grad = False
-    model.pe_embedding = nn.Embedding.from_pretrained(empty_pe)
-    model.load_state_dict(torch.load(args.model_loc, map_location="cpu"),
-                          strict=True)
+    model = LitUCEModel.load_from_checkpoint(args.model_loc, strict=False)
     # Load in the real token embeddings
     all_pe = get_ESM2_embeddings(args)
     # This will make sure that you don't overwrite the tokens in case you're embedding species from the training data
     # We avoid doing that just in case the random seeds are different across different versions. 
-    if all_pe.shape[0] != 145469: 
-        all_pe.requires_grad = False
-        model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
+    #if all_pe.shape[0] != 145469: 
+    all_pe.requires_grad = False
+    #model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
     print(f"Loaded model:\n{args.model_loc}")
     model = model.eval()
-    model = accelerator.prepare(model)
+    if args.compiled:
+        model = torch.compile(model, dynamic=False)
     batch_size = args.batch_size
 
     #### Run the model ####
@@ -227,33 +250,41 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
                             collate_fn=multi_dataset_sentence_collator,
-                            num_workers=0)
-    dataloader = accelerator.prepare(dataloader)
-    pbar = tqdm(dataloader, disable=not accelerator.is_local_main_process)
-    dataset_embeds = []
-    with torch.no_grad():
-        for batch in pbar:
-            batch_sentences, mask, idxs = batch[0], batch[1], batch[2]
-            batch_sentences = batch_sentences.permute(1, 0)
-            if args.multi_gpu:
-                batch_sentences = model.module.pe_embedding(batch_sentences.long())
-            else:
-                batch_sentences = model.pe_embedding(batch_sentences.long())
-            batch_sentences = nn.functional.normalize(batch_sentences,
-                                                      dim=2)  # Normalize token outputs now
-            _, embedding = model.forward(batch_sentences, mask=mask)
-            # Fix for duplicates in last batch
-            accelerator.wait_for_everyone()
-            embeddings = accelerator.gather_for_metrics((embedding))
-            if accelerator.is_main_process:
-                dataset_embeds.append(embeddings.detach().cpu().numpy())
+                            num_workers=1)
+    pred_writer = CustomWriter(output_dir=args.dir, write_interval="epoch")
+    trainer = L.Trainer(
+                        precision="bf16-mixed",
+                        strategy=DDPStrategy(process_group_backend="nccl"),
+                        num_nodes=args.num_nodes,
+                        inference_mode=False, 
+                       callbacks=[pred_writer]
+                       )
 
-    accelerator.wait_for_everyone()
-    if accelerator.is_main_process:
-        dataset_embeds = np.vstack(dataset_embeds)
-        adata.obsm["X_uce"] = dataset_embeds
+    # or you can set `write_interval="batch"` and override `write_on_batch_end` to save
+    # predictions at batch level
+    
+    trainer.predict(model=model, dataloaders=dataloader, return_predictions=False)
+    if trainer.is_global_zero:
+        embeddings = []
+        idxs = []
+        for rank in range(trainer.world_size):
+            emb_path = os.path.join(args.dir, f"embeddings_{rank}.pt")
+            idx_path = os.path.join(args.dir, f"batch_indices_{rank}.pt")
+            rank_emb = torch.load(emb_path, map_location="cpu")
+            rank_emb = torch.vstack(rank_emb).numpy()
+            embeddings.append(rank_emb)
+            rank_idx = flatten(torch.load(idx_path)[0]) # why is this a triple nested list??
+            print(rank_emb.shape, len(rank_idx))
+            idxs.append(rank_idx)
+
+            os.remove(emb_path)
+            os.remove(idx_path)
+        dataset_embeds = np.vstack(embeddings)
+        idxs = np.concatenate(idxs)
+        idxs = np.argsort(idxs)
+        adata.obsm["X_uce"] = dataset_embeds[idxs]
         write_path = args.dir + f"{name}_uce_adata.h5ad"
         adata.write(write_path)
-
+        
         print("*****Wrote Anndata to:*****")
         print(write_path)

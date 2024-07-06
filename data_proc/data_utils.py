@@ -254,6 +254,7 @@ def get_species_to_pe(EMBEDDING_DIR):
             "pig": EMBEDDING_DIR / 'Sus_scrofa.Sscrofa11.1.gene_symbol_to_embedding_ESM2.pt',
             "macaca_fascicularis": EMBEDDING_DIR / 'Macaca_fascicularis.Macaca_fascicularis_6.0.gene_symbol_to_embedding_ESM2.pt',
             "macaca_mulatta": EMBEDDING_DIR / 'Macaca_mulatta.Mmul_10.gene_symbol_to_embedding_ESM2.pt',
+            "rabbit":"/lfs/local/0/yanay/SATURN/protein_embeddings/data/Oryctolagus_cuniculus.OryCun2.0.pep.all.gene_symbol_to_embedding_ESM2.pt"
         }
     extra_species = pd.read_csv("./model_files/new_species_protein_embeddings.csv").set_index("species").to_dict()["path"]
     embeddings_paths.update(extra_species) # adds new species

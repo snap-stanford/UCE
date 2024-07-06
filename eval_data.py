@@ -85,7 +85,7 @@ class MultiDatasetSentenceCollator(object):
     def __call__(self, batch):
         batch_size = len(batch)
         batch_sentences = torch.zeros((batch_size, self.pad_length))
-        mask = torch.zeros((batch_size, self.pad_length))
+        mask = torch.zeros((batch_size, self.pad_length), dtype=bool)
         cell_sentences = torch.zeros((batch_size, self.pad_length))
 
         idxs = torch.zeros(batch_size)
@@ -162,9 +162,9 @@ def sample_cell_sentences(counts, batch_weights, dataset, args,
         longest_seq_len = max(longest_seq_len, i)
         remainder_len = (args.pad_length - i)
 
-        cell_mask = torch.concat((torch.ones(i),
+        cell_mask = torch.concat((torch.zeros(i, dtype=bool),
                                   # pay attention to all of these tokens, ignore the rest!
-                                  torch.zeros(remainder_len)))
+                                  torch.ones(remainder_len, dtype=bool)))
 
         mask[c, :] = cell_mask
 
@@ -173,4 +173,4 @@ def sample_cell_sentences(counts, batch_weights, dataset, args,
         
     cell_sentences_pe = cell_sentences.long() # token indices
     
-    return cell_sentences_pe, mask, longest_seq_len, cell_sentences
+    return cell_sentences_pe, mask, args.pad_length, cell_sentences
