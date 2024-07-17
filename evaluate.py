@@ -283,7 +283,10 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
         idxs = np.concatenate(idxs)
         idxs = np.argsort(idxs)
         adata.obsm["X_uce"] = dataset_embeds[idxs]
+        if len(args.append_to_saved_adata) > 0:
+            name += ("_" + args.append_to_saved_adata)
         write_path = args.dir + f"{name}_uce_adata.h5ad"
+        
         adata.write(write_path)
         
         print("*****Wrote Anndata to:*****")

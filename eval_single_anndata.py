@@ -138,6 +138,9 @@ if __name__ == "__main__":
                         help='Use multiple GPUs')
     parser.add_argument('--nhead', type=int, default=8, help='Transformer number of heads')
     # Misc Arguments
+    parser.add_argument("--append_to_saved_adata",
+                        default="", type=str,
+                        help="Add additional string value to file name of saved UCE anndata.")
     parser.add_argument("--spec_chrom_csv_path",
                         default="./model_files/species_chrom.csv", type=str,
                         help="CSV Path for species genes to chromosomes and start locations.")
@@ -152,5 +155,6 @@ if __name__ == "__main__":
                         help="PKL file which contains offsets for each species.")
     parser.add_argument('--num_nodes', type=int, default=1, help='Number of training nodes')
     parser.add_argument('--compiled', action='store_true', help='Whether the code is compiled')
+    
     args = parser.parse_args()
     main(args)
