@@ -205,10 +205,10 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
     torch.set_float32_matmul_precision('medium')
     #### Set up the model ####
     token_dim = args.token_dim
-    emsize = 1280  # embedding dimension
+    emsize = args.emsize  # embedding dimension
     d_hid = args.d_hid  # dimension of the feedforward network model in nn.TransformerEncoder
     nlayers = args.nlayers  # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-    nhead = 20  # number of heads in nn.MultiheadAttention
+    nhead = args.nhead  # number of heads in nn.MultiheadAttention
     dropout = 0.05  # dropout probability
     '''
     model = LitUCEModel(token_dim=args.token_dim,

@@ -130,7 +130,7 @@ if __name__ == "__main__":
                         help='Output dimension.')
     parser.add_argument('--d_hid', type=int, default=5120,
                         help='Hidden dimension.')
-    parser.add_argument('--emsize', type=int, default=768,
+    parser.add_argument('--emsize', type=int, default=1280,
                         help='Transformer Embed Dim.')
     parser.add_argument('--token_dim', type=int, default=5120,
                         help='Token dimension.')
