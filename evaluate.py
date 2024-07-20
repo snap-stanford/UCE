@@ -32,7 +32,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import torch
-
+import time
 
 class AnndataProcessor:
     def __init__(self, args):
@@ -264,9 +264,23 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
     # predictions at batch level
     
     trainer.predict(model=model, dataloaders=dataloader, return_predictions=False)
+
+    if trainer.is_global_zero:
+        all_written = False # Why is there no wait for all to finish method?
+        while not all_written:
+            all_written = True
+            for rank in range(trainer.world_size):
+                for rank in range(trainer.world_size):
+                    emb_path = os.path.join(args.dir, f"embeddings_{rank}.pt")
+                    idx_path = os.path.join(args.dir, f"batch_indices_{rank}.pt")
+    
+                    all_written = all_written and os.path.exists(emb_path) & os.path.exists(idx_path)
+                if not all_written:
+                    time.sleep(0.01)
     if trainer.is_global_zero:
         embeddings = []
         idxs = []
+        
         for rank in range(trainer.world_size):
             emb_path = os.path.join(args.dir, f"embeddings_{rank}.pt")
             idx_path = os.path.join(args.dir, f"batch_indices_{rank}.pt")
