@@ -97,7 +97,7 @@ class TransformerModel(nn.Module):
             output Tensor of shape [seq_len, batch_size, ntoken]
         """
         src = self.encoder(src) * math.sqrt(self.d_model)
-        src = self.pos_encoder(src)
+        #src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_key_padding_mask=( 1 -mask))
         gene_output = self.decoder(output) # batch x seq_len x 128
         # embedding = torch.mul(gene_output, mask.t().unsqueeze(2)).sum(0) # average over non zero genes
@@ -112,4 +112,3 @@ class TransformerModel(nn.Module):
         dec = self.binary_decoder \
             (torch.hstack((cell_embedding, gene_embeddings)))
         return dec
-
