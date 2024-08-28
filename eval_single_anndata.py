@@ -50,8 +50,8 @@ Parameters:
     Offset index, tokens after this mark are chromosome identifiers.
 - `sample_size` (int):
     Number of genes sampled for cell sentence.
-- `multi_gpu` (bool):
-    Run evaluation on multiple GPUs (using accelerator)    
+- `intermediate_outputs` (bool):
+    Save intermediate outputs from transformer layers as numpy file rather than cell embeddings.    
 
 Returns:
 -------
@@ -134,8 +134,6 @@ if __name__ == "__main__":
                         help='Transformer Embed Dim.')
     parser.add_argument('--token_dim', type=int, default=5120,
                         help='Token dimension.')
-    parser.add_argument('--multi_gpu', type=bool, default=False,
-                        help='Use multiple GPUs')
     parser.add_argument('--nhead', type=int, default=8, help='Transformer number of heads')
     # Misc Arguments
     parser.add_argument("--append_to_saved_adata",
@@ -155,6 +153,8 @@ if __name__ == "__main__":
                         help="PKL file which contains offsets for each species.")
     parser.add_argument('--num_nodes', type=int, default=1, help='Number of training nodes')
     parser.add_argument('--compiled', action='store_true', help='Whether the code is compiled')
+    parser.add_argument('--intermediate_outputs', type=bool, default=False,
+                        help='Save intermediate transformer outputs')
     
     args = parser.parse_args()
     main(args)

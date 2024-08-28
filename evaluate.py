@@ -194,6 +194,7 @@ class CustomWriter(BasePredictionWriter):
         # this will create N (num processes) files in `output_dir` each containing
         # the predictions of it's respective rank
         torch.save(predictions, os.path.join(self.output_dir, f"embeddings_{trainer.global_rank}.pt"))
+        
 
         # optionally, you can also save `batch_indices` to get the information about the data index
         # from your prediction data
@@ -224,12 +225,15 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
         raise ValueError("Must provide a model location")
     # intialize as empty
     model = LitUCEModel.load_from_checkpoint(args.model_loc, strict=False)
+    if args.intermediate_outputs:
+        model.intermediate_outputs = True
+        model.register_activations()
     # Load in the real token embeddings
-    all_pe = get_ESM2_embeddings(args)
+    #all_pe = get_ESM2_embeddings(args)
     # This will make sure that you don't overwrite the tokens in case you're embedding species from the training data
     # We avoid doing that just in case the random seeds are different across different versions. 
     #if all_pe.shape[0] != 145469: 
-    all_pe.requires_grad = False
+    #all_pe.requires_grad = False
     #model.pe_embedding = nn.Embedding.from_pretrained(all_pe)
     print(f"Loaded model:\n{args.model_loc}")
     model = model.eval()
@@ -257,7 +261,7 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
                         strategy=DDPStrategy(process_group_backend="nccl"),
                         num_nodes=args.num_nodes,
                         inference_mode=False, 
-                       callbacks=[pred_writer]
+                        callbacks=[pred_writer]
                        )
 
     # or you can set `write_interval="batch"` and override `write_on_batch_end` to save
@@ -293,15 +297,32 @@ def run_eval(adata, name, pe_idx_path, chroms_path, starts_path, shapes_dict,
 
             os.remove(emb_path)
             os.remove(idx_path)
-        dataset_embeds = np.vstack(embeddings)
+        dataset_embeds = np.vstack(embeddings) # stack along batch idx
         idxs = np.concatenate(idxs)
         idxs = np.argsort(idxs)
-        adata.obsm["X_uce"] = dataset_embeds[idxs]
+
         if len(args.append_to_saved_adata) > 0:
-            name += ("_" + args.append_to_saved_adata)
-        write_path = args.dir + f"{name}_uce_adata.h5ad"
+                name += ("_" + args.append_to_saved_adata)
+        write_path = args.dir + name
         
-        adata.write(write_path)
-        
-        print("*****Wrote Anndata to:*****")
-        print(write_path)
+        if args.intermediate_outputs:
+            dataset_embeds = dataset_embeds[idxs] # proper order
+            
+            adata.obsm["X_uce_final"] = dataset_embeds[:, :, -1]
+            for layer_num in range(args.nlayers):
+                adata.obsm[f"X_uce_layer_{layer_num}"] = dataset_embeds[:, :, layer_num]
+            write_path += "_intermediate_outputs_uce_adata.h5ad"
+            #np.save(write_path, dataset_embeds)
+            adata.write(write_path)
+            print(f"*****Wrote Intermediate outputs anndata to:*****")    
+            print("*****Wrote Anndata to:*****")
+            print(write_path)
+        else:
+            # Create AnnData normally with CLS outputs    
+            adata.obsm["X_uce"] = dataset_embeds[idxs]
+            write_path += "_uce_adata.h5ad"
+            
+            adata.write(write_path)
+            
+            print("*****Wrote Anndata to:*****")
+            print(write_path)
