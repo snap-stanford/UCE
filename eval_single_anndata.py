@@ -11,7 +11,7 @@ Parameters:
     Species of the AnnData.
 - `filter` (bool):
     Additional gene/cell filtering on the AnnData.
-- `skip` (bool):f
+- `skip` (bool):
     Skip datasets that appear to have already been created.
 - `model_loc` (str):
     Location of pretrained UCE model's weights in a `.torch` file.
