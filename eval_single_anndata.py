@@ -11,7 +11,7 @@ Parameters:
     Species of the AnnData.
 - `filter` (bool):
     Additional gene/cell filtering on the AnnData.
-- `skip` (bool):
+- `skip` (bool):f
     Skip datasets that appear to have already been created.
 - `model_loc` (str):
     Location of pretrained UCE model's weights in a `.torch` file.
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=25,
                         help='Batch size.')
     parser.add_argument('--pad_length', type=int, default=1536,
-                        help='Batch size.')
+                        help='Padding length for input.')
     parser.add_argument("--pad_token_idx", type=int, default=0,
                         help="PAD token index")
     parser.add_argument("--chrom_token_left_idx", type=int, default=1,
