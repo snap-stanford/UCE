@@ -1,0 +1,27 @@
+name: uce
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - python
+  - pandas
+  - scikit-learn
+  - numpy
+  - tqdm
+  - pytorch>=2.0.0
+  - pytorch-gpu
+  - torchvision
+  - torchaudio
+  - cuda-toolkit>=12.0.0
+  - accelerate
+  - requests
+  - urllib3==1.26.6  
+  - scanpy
+  # - python-igraph
+  # - leidenalg
+  - ipykernel 
+  - pip 
+  - pip:
+    - gdown
