@@ -51,14 +51,19 @@ You can download processed datasets used in the papere [here](https://drive.goog
 If you find our paper and code useful, please consider citing the [preprint](https://www.biorxiv.org/content/10.1101/2023.11.28.568918v1):
 
 ```
-@article{rosen2023universal,
-  title={Universal Cell Embeddings: A Foundation Model for Cell Biology},
-  author={Rosen, Yanay and Roohani, Yusuf and Agrawal, Ayush and Samotorcan, Leon and Consortium, Tabula Sapiens and Quake, Stephen R and Leskovec, Jure},
-  journal={bioRxiv},
-  pages={2023--11},
-  year={2023},
-  publisher={Cold Spring Harbor Laboratory}
+@article{rosen_2026,
+  title = {Universal cell embedding provides a foundation model for cell biology},
+  author = {Rosen, Yanay and Roohani, Yusuf and Agrawal, Ayush and Samotorčan, Leon and Tabula Sapiens Consortium and Quake, Stephen R. and Leskovec, Jure},
+  url = {https://www.nature.com/articles/s41586-026-10689-z},
+  year = {2026},
+  month = {jul},
+  day = {8},
+  urldate = {2026-07-08},
+  journal = {Nature},
+  issn = {0028-0836},
+  doi = {10.1038/s41586-026-10689-z},
 }
+
 ```
 
 ## Analyses
